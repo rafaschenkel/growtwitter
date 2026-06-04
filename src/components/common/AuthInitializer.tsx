@@ -1,22 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Box, CircularProgress } from '@mui/material';
+import { useAppSelector } from '@/store/hooks';
 
 interface AuthInitializerProps {
   children: React.ReactNode;
 }
 
 export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) => {
-  const [isInitializing, setIsInitializing] = useState(true);
+  const { isLoading } = useAppSelector((state) => state.auth);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitializing(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isInitializing) {
+  if (isLoading) {
     return (
       <Box
         sx={{
