@@ -144,25 +144,55 @@ export const userApi = apiSlice.injectEndpoints({
       query: (userId) => ({
         url: `/users/follow/${userId}`,
         method: 'POST',
+        body: {}, // API espera um body, mesmo que vazio
       }),
       invalidatesTags: (_result, _error, userId) => [
         { type: 'User', id: userId },
+        { type: 'User', id: 'LIST' },
         'User',
         'Feed',
         'Auth',
       ],
+      // Força refetch do usuário logado após follow
+      async onQueryStarted(userId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalida cache do usuário logado para forçar refetch
+          dispatch(
+            apiSlice.util.invalidateTags([
+              { type: 'User', id: userId },
+              'Auth',
+            ])
+          );
+        } catch {}
+      },
     }),
     unfollowUser: builder.mutation({
       query: (userId) => ({
-        url: `/users/unfollow/${userId}`,
+        url: `/users/follow/${userId}`,
         method: 'DELETE',
+        // DELETE não precisa de body
       }),
       invalidatesTags: (_result, _error, userId) => [
         { type: 'User', id: userId },
+        { type: 'User', id: 'LIST' },
         'User',
         'Feed',
         'Auth',
       ],
+      // Força refetch do usuário logado após unfollow
+      async onQueryStarted(userId, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalida cache do usuário logado para forçar refetch
+          dispatch(
+            apiSlice.util.invalidateTags([
+              { type: 'User', id: userId },
+              'Auth',
+            ])
+          );
+        } catch {}
+      },
     }),
   }),
 });
