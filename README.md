@@ -356,6 +356,7 @@ Desenvolvido por Rafael Schenkel de Souza - Projeto Full Stack III
 
 ## 🐛 Problemas Conhecidos
 
+- Versão mobile precisa de ajustes
 - A funcionalidade de "Curtidas" no perfil ainda não está implementada
 - A funcionalidade de "Excluir tweets" ainda não está implementada ( Back  | Front)
 - Trending topics são estáticos (não vêm da API)
