@@ -17,7 +17,11 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { CustomAvatar } from '@/components/common';
-import { useFollowUserMutation, useUnfollowUserMutation } from '@/store/api/apiSlice';
+import { 
+  useFollowUserMutation, 
+  useUnfollowUserMutation,
+  useGetUserByIdQuery 
+} from '@/store/api/apiSlice';
 import { useAppSelector } from '@/store/hooks';
 import { useSyncLoggedUser } from '@/hooks/useSyncLoggedUser';
 import type { User } from '@/types';
@@ -32,6 +36,11 @@ interface FollowersModalProps {
 export const FollowersModal = ({ open, onClose, followers, isLoading }: FollowersModalProps) => {
   const navigate = useNavigate();
   const loggedUser = useAppSelector((state) => state.auth.user);
+  
+  const { data: freshLoggedUser } = useGetUserByIdQuery(loggedUser?.id || '', {
+    skip: !loggedUser?.id,
+  });
+  
   const [followUser] = useFollowUserMutation();
   const [unfollowUser, { isLoading: isUnfollowing }] = useUnfollowUserMutation();
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +50,14 @@ export const FollowersModal = ({ open, onClose, followers, isLoading }: Follower
   useSyncLoggedUser();
 
   const isFollowingUser = (userId: string): boolean => {
-    if (!loggedUser) return false;
-    return loggedUser.following?.some((item) => item.following?.id === userId) ?? false;
+    const freshUser = freshLoggedUser && typeof freshLoggedUser === 'object' && 'user' in freshLoggedUser
+      ? freshLoggedUser.user
+      : freshLoggedUser;
+    
+    const currentUser = freshUser || loggedUser;
+    if (!currentUser) return false;
+    
+    return currentUser.following?.some((item: any) => item?.following?.id === userId || item?.id === userId) ?? false;
   };
 
   const handleFollowToggle = async (userId: string) => {
@@ -57,14 +72,14 @@ export const FollowersModal = ({ open, onClose, followers, isLoading }: Follower
       } else {
         await followUser(userId).unwrap();
       }
+      // Pequena pausa para o cache invalidar
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error: any) {
       console.error('Error toggling follow:', error);
       const errorMsg = error?.data?.message || 'Erro ao processar ação. Tente novamente.';
       setError(errorMsg);
     } finally {
-      setTimeout(() => {
-        setProcessingUserId(null);
-      }, 500);
+      setProcessingUserId(null);
     }
   };
 

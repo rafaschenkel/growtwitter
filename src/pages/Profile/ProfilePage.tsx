@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box,
@@ -85,30 +85,44 @@ export const ProfilePage = () => {
   const isOwnProfile = loggedUser?.id === userId;
 
   const isFollowingUser = (() => {
-    const currentUser = freshLoggedUser || loggedUser;
+    // freshLoggedUser retorna { user: {...} }, não o user diretamente
+    const freshUser = freshLoggedUser && typeof freshLoggedUser === 'object' && 'user' in freshLoggedUser
+      ? freshLoggedUser.user
+      : freshLoggedUser;
+    
+    const currentUser = freshUser || loggedUser;
+    
     if (!currentUser || !userId) return false;
 
-    interface FollowingItem {
-      following?: {
-        id: string;
-      };
+    // A API pode retornar following em diferentes formatos:
+    // Formato 1: array de objetos com { following: { id } }
+    // Formato 2: array de objetos com { id }
+    // Formato 3: array de strings (IDs diretos)
+    
+    if (!currentUser.following || !Array.isArray(currentUser.following)) {
+      return false;
     }
 
-    const result =
-      currentUser.following?.some(
-        (item: FollowingItem) => item.following?.id === userId
-      ) ?? false;
-    return result;
+    const following = currentUser.following;
+
+    // Tenta diferentes estruturas
+    const isFollowing = following.some((item: any) => {
+      // Formato 1: { following: { id: "..." } }
+      if (item?.following?.id === userId) return true;
+      
+      // Formato 2: { id: "..." }
+      if (item?.id === userId) return true;
+      
+      // Formato 3: string direto
+      if (typeof item === 'string' && item === userId) return true;
+      
+      return false;
+    });
+
+    return isFollowing;
   })();
 
-  useEffect(() => {
-    if (isProcessingFollow) {
-      const timer = setTimeout(() => {
-        setIsProcessingFollow(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isFollowingUser, isProcessingFollow]);
+
 
   const filteredTweets = (() => {
     if (!user?.tweets) return [];
@@ -264,8 +278,11 @@ export const ProfilePage = () => {
       } else {
         await followUser(userId).unwrap();
       }
+      // Pequena pausa para o cache invalidar
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('Error toggling follow:', error);
+    } finally {
       setIsProcessingFollow(false);
     }
   };
